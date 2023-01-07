@@ -45,7 +45,6 @@ ORTSession* ORTSession_New(ORTEnv ort_env,char* model_location, ORTSessionOption
     for (int i = 0; i < num_input_nodes; i++) {
         char* input_name = (*session).GetInputName(i, allocator);
         input_node_names[i] = input_name;
-        printf("Input %d : name=%s\n", i, input_name);
     }
 
     size_t num_output_nodes = (*session).GetOutputCount();
@@ -56,7 +55,6 @@ ORTSession* ORTSession_New(ORTEnv ort_env,char* model_location, ORTSessionOption
     for (int i = 0; i < num_output_nodes; i++) {
         char* output_name = (*session).GetOutputName(i, allocator);
         output_node_names[i] = output_name;
-        printf("Output %d : name=%s\n", i, output_name);
     }
 
     auto res = new ORTSession{session, input_node_names,num_input_nodes, output_node_names, num_output_nodes};
