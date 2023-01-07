@@ -53,12 +53,26 @@ typedef struct CudaOptions{
     int do_copy_in_default_stream;
     int has_user_compute_stream;
 } CudaOptions;
+typedef struct TensorRTOptions{
+    int device_id;
+    int max_workspace_size;
+    int max_partition_iterations;
+    int min_subgraph_size;
+    int fp16_enable;
+    int int8_enable;
+    int int8_use_native_calibration_table;
+    int engine_cache_enable;
+    char* engine_cache_path;
+    int dump_subgraphs;
+} TensorRTOptions;
 
 ORTSessionOptions ORTSessionOptions_New();
-ORTSession ORTSession_New(ORTEnv ort_env,char* model_location, ORTSessionOptions session_options);
+ORTSession* ORTSession_New(ORTEnv ort_env,char* model_location, ORTSessionOptions session_options);
 void ORTSessionOptions_AppendExecutionProvider_CUDA(ORTSessionOptions session_options, CudaOptions cuda_options);
+void ORTSessionOptions_AppendExecutionProvider_TensorRT(ORTSessionOptions session_options, TensorRTOptions trt_options);
 ORTEnv ORTEnv_New(int logging_level, char* log_env);
-TensorVectors ORTSession_Predict(ORTSession session, ORTValues* ort_values_input);
+TensorVectors ORTSession_Predict(ORTSession* session, ORTValues* ort_values_input);
+void ORTSession_Free(ORTSession* session);
 ORTValues* ORTValues_New();
 void ORTValues_AppendTensor( TensorVector tensor_input, ORTValues* ort_values);
 void TensorVectors_Clear(TensorVectors tvs);

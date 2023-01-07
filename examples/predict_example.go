@@ -11,13 +11,16 @@ import (
 
 func main() {
 	ortEnvDet := onnxruntime.NewORTEnv(onnxruntime.ORT_LOGGING_LEVEL_VERBOSE, "development")
+	defer ortEnvDet.Close()
 	ortDetSO := onnxruntime.NewORTSessionOptions()
+	defer ortDetSO.Close()
 
 	detModel, err := onnxruntime.NewORTSession(ortEnvDet, "/tmp/model/model.onnx", ortDetSO)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	defer detModel.Close()
 
 	shape := []int64{3, 4, 5}
 	input := randFloats(0, 1, int(shape[0]*shape[1]*shape[2]))

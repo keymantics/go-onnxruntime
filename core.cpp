@@ -15,11 +15,26 @@ void ORTSessionOptions_AppendExecutionProvider_CUDA(ORTSessionOptions session_op
     (*session_options).AppendExecutionProvider_CUDA(ort_cuda_options);
 }
 
+void ORTSessionOptions_AppendExecutionProvider_TensorRT(ORTSessionOptions session_options, TensorRTOptions trt_options) {
+	OrtTensorRTProviderOptions ort_trt_options{};
+	ort_trt_options.device_id = trt_options.device_id;
+	ort_trt_options.trt_max_workspace_size = trt_options.max_workspace_size;
+	ort_trt_options.trt_max_partition_iterations = trt_options.max_partition_iterations;
+	ort_trt_options.trt_min_subgraph_size = trt_options.min_subgraph_size;
+	ort_trt_options.trt_fp16_enable = trt_options.fp16_enable;
+	ort_trt_options.trt_int8_enable = trt_options.int8_enable;
+	ort_trt_options.trt_int8_use_native_calibration_table = trt_options.int8_use_native_calibration_table;
+	ort_trt_options.trt_engine_cache_enable = trt_options.engine_cache_enable;
+	ort_trt_options.trt_engine_cache_path = trt_options.engine_cache_path;
+	ort_trt_options.trt_dump_subgraphs = trt_options.dump_subgraphs;
+    (*session_options).AppendExecutionProvider_TensorRT(ort_trt_options);
+}
+
 ORTEnv ORTEnv_New(int logging_level,char* log_env) {
 	return new Ort::Env(OrtLoggingLevel(logging_level),log_env);
 }
 
-ORTSession ORTSession_New(ORTEnv ort_env,char* model_location, ORTSessionOptions session_options){
+ORTSession* ORTSession_New(ORTEnv ort_env,char* model_location, ORTSessionOptions session_options){
     auto session = new Ort::Session(*ort_env, model_location, *session_options);
     Ort::AllocatorWithDefaultOptions allocator;
     size_t num_input_nodes = (*session).GetInputCount();
@@ -44,7 +59,7 @@ ORTSession ORTSession_New(ORTEnv ort_env,char* model_location, ORTSessionOptions
         printf("Output %d : name=%s\n", i, output_name);
     }
 
-    auto res = ORTSession{session, input_node_names,num_input_nodes, output_node_names, num_output_nodes};
+    auto res = new ORTSession{session, input_node_names,num_input_nodes, output_node_names, num_output_nodes};
     return res;
 }
 
@@ -153,9 +168,9 @@ void *ORTValue_GetTensorMutableData(Ort::Value& ort_value, size_t size){
     return res;
 }
 
-TensorVectors ORTSession_Predict(ORTSession session, ORTValues *ort_values_input){
+TensorVectors ORTSession_Predict(ORTSession* session, ORTValues *ort_values_input){
     // score model & input tensor, get back output tensor
-    auto output_tensors = (*session.session).Run(Ort::RunOptions{nullptr}, session.input_node_names, (*ort_values_input).data(), session.input_node_names_length, session.output_node_names, session.output_node_names_length);
+    auto output_tensors = (*session->session).Run(Ort::RunOptions{nullptr}, session->input_node_names, (*ort_values_input).data(), session->input_node_names_length, session->output_node_names, session->output_node_names_length);
     
     auto output_tensors_count = output_tensors.size();
     TensorVector* vector_tv  = (TensorVector*)realloc(vector_tv, output_tensors_count*sizeof(*vector_tv));
@@ -183,6 +198,12 @@ TensorVectors ORTSession_Predict(ORTSession session, ORTValues *ort_values_input
 
     TensorVectors tvs = {vector_tv, (int)output_tensors_count};
     return tvs;
+}
+
+void ORTSession_Free(ORTSession* session) {
+	free(session->input_node_names);
+	free(session->output_node_names);
+	free(session);
 }
 
 void TensorVectors_Clear(TensorVectors tvs){

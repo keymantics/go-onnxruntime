@@ -18,7 +18,7 @@ type (
 		sessOpts C.ORTSessionOptions
 	}
 	ORTSession struct {
-		sess C.struct_ORTSession
+		sess *C.struct_ORTSession
 	}
 	ORTEnv struct {
 		env C.ORTEnv
@@ -41,6 +41,18 @@ type (
 		DoCopyInDefaultStream bool
 		HasUserComputeStream  bool
 	}
+	TensorRTOptions struct {
+		DeviceID                      int
+		MaxWorkspaceSize              int
+		MaxPartitionIterations        int
+		MinSubgraphSize               int
+		FP16Enable                    bool
+		Int8Enable                    bool
+		Int8UseNativeCalibrationTable bool
+		EngineCacheEnable             bool
+		EngineCachePath               string
+		DumpSubgraphs                 bool
+	}
 )
 
 // NewORTEnv Create onnxruntime environment
@@ -49,7 +61,13 @@ func NewORTEnv(loggingLevel ORTLoggingLevel, logEnv string) (ortEnv *ORTEnv) {
 	ortEnv = &ORTEnv{
 		env: C.ORTEnv_New(C.int(int(loggingLevel)), cLogEnv),
 	}
+	C.free(unsafe.Pointer(cLogEnv))
 	return ortEnv
+}
+
+func (o *ORTEnv) Close() error {
+	C.free(unsafe.Pointer(o.env))
+	return nil
 }
 
 // NewORTSessionOptions return empty onnxruntime session options.
@@ -103,6 +121,52 @@ func (so ORTSessionOptions) AppendExecutionProviderCUDA(cudaOptions CudaOptions)
 		do_copy_in_default_stream: C.int(intDoCopyInDefaultStream),
 		has_user_compute_stream:   C.int(intHasUserComputeStream),
 	})
+}
+
+// AppendExecutionProviderTensorRT append cuda device to the session options.
+func (so ORTSessionOptions) AppendExecutionProviderTensorRT(trtOptions TensorRTOptions) {
+	var fp16Enable int
+	if trtOptions.FP16Enable {
+		fp16Enable = 1
+	}
+
+	var int8Enable int
+	if trtOptions.Int8Enable {
+		int8Enable = 1
+	}
+
+	var int8UseNativeCalibrationTable int
+	if trtOptions.Int8UseNativeCalibrationTable {
+		int8UseNativeCalibrationTable = 1
+	}
+
+	var engineCacheEnable int
+	var engineCachePath *C.char
+	if trtOptions.EngineCacheEnable {
+		engineCacheEnable = 1
+		engineCachePath = C.CString(trtOptions.EngineCachePath)
+	}
+
+	C.ORTSessionOptions_AppendExecutionProvider_TensorRT(so.sessOpts, C.TensorRTOptions{
+		device_id:                         C.int(trtOptions.DeviceID),
+		max_workspace_size:                C.int(trtOptions.MaxWorkspaceSize),
+		max_partition_iterations:          C.int(trtOptions.MaxPartitionIterations),
+		min_subgraph_size:                 C.int(trtOptions.MinSubgraphSize),
+		fp16_enable:                       C.int(fp16Enable),
+		int8_enable:                       C.int(int8Enable),
+		int8_use_native_calibration_table: C.int(int8UseNativeCalibrationTable),
+		engine_cache_enable:               C.int(engineCacheEnable),
+		engine_cache_path:                 engineCachePath,
+	})
+
+	if trtOptions.EngineCacheEnable {
+		C.free(unsafe.Pointer(engineCachePath))
+	}
+}
+
+func (so ORTSessionOptions) Close() error {
+	C.free(unsafe.Pointer(so.sessOpts))
+	return nil
 }
 
 // newTensorVector generate C.TensorVector
@@ -387,4 +451,9 @@ func (ortSession *ORTSession) Predict(inputTensorValues []TensorValue) (result [
 	C.TensorVectors_Clear(output)
 
 	return result, nil
+}
+
+func (ortSession *ORTSession) Close() error {
+	C.ORTSession_Free(ortSession.sess)
+	return nil
 }
