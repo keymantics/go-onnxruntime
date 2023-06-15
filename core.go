@@ -448,7 +448,8 @@ func (ortSession *ORTSession) Predict(inputTensorValues []TensorValue) (result [
 			Shape: shape,
 		}
 	}
-	C.TensorVectors_Clear(output)
+	C.TensorVectors_Free(output)
+	C.ORTValues_Free(ortValuesInput.val)
 
 	return result, nil
 }

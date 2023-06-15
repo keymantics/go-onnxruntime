@@ -74,8 +74,9 @@ ORTEnv ORTEnv_New(int logging_level, char* log_env);
 TensorVectors ORTSession_Predict(ORTSession* session, ORTValues* ort_values_input);
 void ORTSession_Free(ORTSession* session);
 ORTValues* ORTValues_New();
+void ORTValues_Free(ORTValues* values);
 void ORTValues_AppendTensor( TensorVector tensor_input, ORTValues* ort_values);
-void TensorVectors_Clear(TensorVectors tvs);
+void TensorVectors_Free(TensorVectors tvs);
 
 #ifdef __cplusplus
 }

@@ -204,10 +204,15 @@ void ORTSession_Free(ORTSession* session) {
 	free(session);
 }
 
-void TensorVectors_Clear(TensorVectors tvs){
+void TensorVectors_Free(TensorVectors tvs){
     for (int i = 0; i < tvs.length; i++) {
         free(tvs.arr_vector[i].shape.val);
         free(tvs.arr_vector[i].val);
     }
     free(tvs.arr_vector);
+}
+
+void ORTValues_Free(ORTValues* values){
+    values->clear();
+    free(values);
 }
